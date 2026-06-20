@@ -12,7 +12,8 @@ export function useAppData() {
   const settings = useLiveQuery(() => db.settings.get("default"), [], defaultSettings);
   const simulationSettings = useLiveQuery(() => db.simulationSettings.get("default"), [], defaultSimulationSettings);
   const snapshots = useLiveQuery(() => db.snapshots.orderBy("createdAt").reverse().toArray(), [], []);
+  const monthlyReports = useLiveQuery(() => db.monthlyReports.toArray(), [], []);
   const metrics = calculateMetrics(bets, movements);
-  const alerts = generateAlerts(metrics, rules ?? defaultRules, settings ?? defaultSettings, Math.max(0, bets.length - (settings?.betsAtLastExport ?? 0)));
-  return { bets, movements, rules: rules ?? defaultRules, settings: settings ?? defaultSettings, simulationSettings: simulationSettings ?? defaultSimulationSettings, snapshots, metrics, alerts };
+  const alerts = generateAlerts(metrics, rules ?? defaultRules, settings ?? defaultSettings, Math.max(0, bets.length - (settings?.betsAtLastExport ?? 0)), bets);
+  return { bets, movements, rules: rules ?? defaultRules, settings: settings ?? defaultSettings, simulationSettings: simulationSettings ?? defaultSimulationSettings, snapshots, monthlyReports, metrics, alerts };
 }

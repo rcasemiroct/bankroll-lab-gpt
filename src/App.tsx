@@ -23,8 +23,11 @@ export function App() {
     if (snapshotChecked.current || !data.settings.onboardingComplete) return;
     snapshotChecked.current = true;
     const last = data.settings.lastSnapshotAt ? new Date(data.settings.lastSnapshotAt).getTime() : 0;
-    if (Date.now() - last > 86_400_000 && (data.bets.length || data.movements.length)) void createSnapshot("daily");
-  }, [data.bets.length, data.movements.length, data.settings.lastSnapshotAt, data.settings.onboardingComplete]);
+    const lastWeekly = data.snapshots.find((snapshot) => snapshot.reason === "weekly")?.createdAt;
+    const weeklyDue = !lastWeekly || Date.now() - new Date(lastWeekly).getTime() > 7 * 86_400_000;
+    if ((data.bets.length || data.movements.length) && weeklyDue) void createSnapshot("weekly");
+    else if (Date.now() - last > 86_400_000 && (data.bets.length || data.movements.length)) void createSnapshot("daily");
+  }, [data.bets.length, data.movements.length, data.settings.lastSnapshotAt, data.settings.onboardingComplete, data.snapshots]);
 
   if (!data.settings.onboardingComplete) return <><Onboarding /><Toaster theme="dark" position="top-center" richColors /></>;
 
