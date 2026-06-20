@@ -1,4 +1,4 @@
-# Bankroll Lab
+# Bankroll Lab GPT
 
 PWA mobile-first para controle privado de banca, registro de apostas, gestão de risco, projeções e simulação Monte Carlo.
 
@@ -62,7 +62,7 @@ O projeto já usa caminhos relativos (`base: "./"`) e inclui o workflow `.github
 3. Envie uma alteração para a branch `main`.
 4. Aguarde o workflow **Deploy Bankroll Lab to Pages** terminar.
 
-A URL ficará no formato `https://SEU-USUARIO.github.io/NOME-DO-REPOSITORIO/`.
+A publicação deste projeto ficará em `https://rcasemiroct.github.io/bankroll-lab-gpt/`.
 
 ## Limites desta versão
 
