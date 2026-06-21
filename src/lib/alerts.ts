@@ -14,10 +14,10 @@ export function generateAlerts(metrics: BankrollMetrics, rules: Rules, settings:
   if (weeklyResult < -metrics.activeBankroll * rules.weeklyStopPercentage) alerts.push(alert("weekly-stop", "high", "Stop semanal atingido", "Sua perda semanal passou do limite definido.", "loss"));
   const latestPending = [...bets].filter((bet) => bet.status === "pending").sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
   const pendingPercentage = latestPending && metrics.activeBankroll > 0 ? latestPending.stake / metrics.activeBankroll : 0;
-  if (pendingPercentage > rules.strongAlertPercentage) alerts.push(alert("stake-strong", "high", "Stake acima do alerta forte", "A exposição pendente ultrapassa o limite forte definido.", "discipline"));
-  else if (pendingPercentage > rules.maxStakePercentage) alerts.push(alert("stake-limit", "medium", "Stake acima do limite definido", "A exposição pendente ultrapassa sua regra de stake máxima.", "discipline"));
+  if (pendingPercentage > rules.strongAlertPercentage) alerts.push(alert("stake-strong", "high", "Valor apostado acima do alerta forte", "A exposição pendente ultrapassa o limite forte definido.", "discipline"));
+  else if (pendingPercentage > rules.maxStakePercentage) alerts.push(alert("stake-limit", "medium", "Valor apostado acima do limite", "A exposição pendente ultrapassa sua regra de valor máximo por aposta.", "discipline"));
   const latestSettled = [...bets].filter((bet) => bet.status === "win" || bet.status === "loss").sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))[0];
-  if (latestPending && latestSettled?.status === "loss" && latestPending.stake > latestSettled.stake) alerts.push(alert("stake-after-loss", "high", "Stake aumentada após perda", "Revise o registro: aumentar stake para recuperar perda viola sua regra.", "discipline"));
+  if (latestPending && latestSettled?.status === "loss" && latestPending.stake > latestSettled.stake) alerts.push(alert("stake-after-loss", "high", "Valor aumentado após perda", "Revise o registro: aumentar o valor apostado para recuperar perda viola sua regra.", "discipline"));
   if (metrics.settledCount < 50) alerts.push(alert("small-sample", "medium", "Amostra menor que 50 apostas", "Não trate o resultado atual como método validado.", "statistical"));
   else if (metrics.settledCount < 100) alerts.push(alert("sample-observation", "low", "Amostra em observação", "Ainda há pouca evidência para extrapolar o edge observado.", "statistical"));
   if (metrics.observedEdge < 0 && metrics.settledCount >= 20) alerts.push(alert("negative-edge", "high", "Edge observado negativo", "O win rate está abaixo do break-even médio.", "statistical"));

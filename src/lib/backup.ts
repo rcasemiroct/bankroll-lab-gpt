@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import type { BackupPayload, Snapshot } from "@/types";
+import type { BackupPayload, Bet, BetStatus, Snapshot } from "@/types";
 
 export const SCHEMA_VERSION = 1;
 export const APP_VERSION = "0.1.0";
@@ -46,7 +46,42 @@ export function validateBackup(value: unknown): value is BackupPayload {
     && Array.isArray(candidate.bets)
     && Array.isArray(candidate.bankrollMovements)
     && Array.isArray(candidate.rules)
-    && Array.isArray(candidate.settings);
+    && Array.isArray(candidate.settings)
+    && candidate.bets.every((bet) => isSupportedBetStatus((bet as Partial<Bet>).status));
+}
+
+const statusAliases: Record<string, BetStatus> = {
+  pending: "pending",
+  open: "pending",
+  win: "win",
+  won: "win",
+  loss: "loss",
+  lost: "loss",
+  void: "void",
+  canceled: "void",
+  cancelled: "void",
+  refunded: "void"
+};
+
+function isSupportedBetStatus(status: unknown) {
+  return typeof status === "string" && status.toLowerCase() in statusAliases;
+}
+
+export function normalizeBackupPayload(payload: BackupPayload): BackupPayload {
+  return {
+    ...payload,
+    bets: payload.bets.map((bet) => {
+      const status = statusAliases[String(bet.status).toLowerCase()];
+      if (!status) throw new Error(`Status incompatível na aposta ${bet.id}.`);
+      if (status === bet.status) return bet;
+      return {
+        ...bet,
+        status,
+        profit: status === "pending" || status === "void" ? 0 : bet.profit,
+        returnAmount: status === "pending" ? 0 : status === "void" ? bet.stake : bet.returnAmount
+      };
+    })
+  };
 }
 
 export async function createSnapshot(reason: Snapshot["reason"]) {
@@ -70,14 +105,15 @@ export async function createSnapshot(reason: Snapshot["reason"]) {
 
 export async function restorePayload(payload: BackupPayload, mode: "replace" | "merge") {
   if (!validateBackup(payload)) throw new Error("Arquivo incompatível ou incompleto.");
+  const normalized = normalizeBackupPayload(payload);
   await createSnapshot("before_import");
   await db.transaction("rw", [db.bets, db.movements, db.rules, db.settings, db.alertPreferences, db.simulationSettings, db.monthlyReports], async () => {
     if (mode === "replace") {
       await Promise.all([db.bets.clear(), db.movements.clear(), db.rules.clear(), db.settings.clear(), db.alertPreferences.clear(), db.simulationSettings.clear(), db.monthlyReports.clear()]);
     }
     await Promise.all([
-      db.bets.bulkPut(payload.bets), db.movements.bulkPut(payload.bankrollMovements), db.rules.bulkPut(payload.rules), db.settings.bulkPut(payload.settings),
-      db.alertPreferences.bulkPut(payload.alertPreferences ?? []), db.simulationSettings.bulkPut(payload.simulationSettings ?? []), db.monthlyReports.bulkPut(payload.monthlyReports ?? [])
+      db.bets.bulkPut(normalized.bets), db.movements.bulkPut(normalized.bankrollMovements), db.rules.bulkPut(normalized.rules), db.settings.bulkPut(normalized.settings),
+      db.alertPreferences.bulkPut(normalized.alertPreferences ?? []), db.simulationSettings.bulkPut(normalized.simulationSettings ?? []), db.monthlyReports.bulkPut(normalized.monthlyReports ?? [])
     ]);
   });
 }

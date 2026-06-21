@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { runMonteCarlo } from "@/lib/monteCarlo";
-import type { SimulationSettings } from "@/types";
+import { calibrateFromHistory, runMonteCarlo } from "@/lib/monteCarlo";
+import type { Bet, SimulationSettings } from "@/types";
 
 const settings: SimulationSettings = { id: "default", initialBankroll: 100, targetBankroll: 120, stopBankroll: 20, averageOdds: 2, winProbability: 0.5, stakeMode: "fixed", fixedStake: 10, stakePercentage: 0.02, maxStake: 10, numberOfBets: 10, numberOfSimulations: 100 };
 
@@ -16,5 +16,39 @@ describe("runMonteCarlo", () => {
     const result = runMonteCarlo({ ...settings, numberOfBets: 20 }, () => 1);
     expect(result.probabilityOfRuin).toBe(1);
     expect(result.probabilityOfTarget).toBe(0);
+  });
+});
+
+describe("calibrateFromHistory", () => {
+  const historicalBet = (date: string, status: Bet["status"], stake: number, odds: number): Bet => ({
+    id: `${date}-${status}-${stake}`,
+    date,
+    sportsbook: "Casa",
+    event: "Evento",
+    market: "Mercado",
+    strategy: "Estratégia",
+    odds,
+    stake,
+    status,
+    returnAmount: 0,
+    profit: status === "win" ? stake * (odds - 1) : status === "loss" ? -stake : 0,
+    notes: "",
+    createdAt: date,
+    updatedAt: date
+  });
+
+  it("calibra apenas apostas encerradas dentro da janela", () => {
+    const result = calibrateFromHistory([
+      historicalBet("2026-01-01", "win", 100, 2),
+      historicalBet("2026-03-01", "win", 20, 1.8),
+      historicalBet("2026-03-15", "loss", 40, 2.2),
+      historicalBet("2026-03-20", "pending", 50, 3)
+    ], 300, 30);
+    expect(result?.count).toBe(2);
+    expect(result?.averageOdds).toBe(2);
+    expect(result?.winProbability).toBe(0.5);
+    expect(result?.averageStake).toBe(30);
+    expect(result?.maximumStake).toBe(40);
+    expect(result?.stakePercentage).toBe(0.1);
   });
 });

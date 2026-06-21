@@ -23,4 +23,15 @@ describe("calculateMetrics", () => {
     expect(metrics.winRate).toBe(0.5);
     expect(metrics.breakEven).toBe(0.5);
   });
+
+  it("separa saldo disponível da banca total quando há apostas pendentes", () => {
+    const metrics = calculateMetrics(
+      [bet("win", 100, 2, "2026-01-02"), bet("pending", 111, 1.9, "2026-01-03")],
+      [movement("deposit", 100), movement("withdrawal", 10)]
+    );
+    expect(metrics.activeBankroll).toBe(190);
+    expect(metrics.pendingExposure).toBe(111);
+    expect(metrics.availableBankroll).toBe(79);
+    expect(metrics.netRealProfit).toBe(100);
+  });
 });

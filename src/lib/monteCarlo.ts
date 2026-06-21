@@ -1,4 +1,38 @@
-import type { SimulationSettings } from "@/types";
+import type { Bet, SimulationSettings } from "@/types";
+
+export type HistoryWindow = 30 | 90 | "all";
+
+export interface HistoryCalibration {
+  count: number;
+  firstDate: string;
+  lastDate: string;
+  averageOdds: number;
+  winProbability: number;
+  averageStake: number;
+  maximumStake: number;
+  stakePercentage: number;
+}
+
+export function calibrateFromHistory(bets: Bet[], activeBankroll: number, window: HistoryWindow): HistoryCalibration | null {
+  const decided = bets.filter((bet) => bet.status === "win" || bet.status === "loss");
+  if (!decided.length) return null;
+  const lastDate = decided.reduce((latest, bet) => bet.date > latest ? bet.date : latest, decided[0].date);
+  const cutoff = window === "all" ? "" : new Date(new Date(`${lastDate}T12:00:00`).getTime() - (window - 1) * 86_400_000).toISOString().slice(0, 10);
+  const sample = decided.filter((bet) => !cutoff || bet.date >= cutoff);
+  if (!sample.length) return null;
+  const totalStake = sample.reduce((total, bet) => total + bet.stake, 0);
+  const averageStake = totalStake / sample.length;
+  return {
+    count: sample.length,
+    firstDate: sample.reduce((earliest, bet) => bet.date < earliest ? bet.date : earliest, sample[0].date),
+    lastDate,
+    averageOdds: sample.reduce((total, bet) => total + bet.odds, 0) / sample.length,
+    winProbability: sample.filter((bet) => bet.status === "win").length / sample.length,
+    averageStake,
+    maximumStake: sample.reduce((maximum, bet) => Math.max(maximum, bet.stake), 0),
+    stakePercentage: activeBankroll > 0 ? averageStake / activeBankroll : 0
+  };
+}
 
 export interface MonteCarloResult {
   probabilityOfTarget: number;

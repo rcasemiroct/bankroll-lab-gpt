@@ -2,6 +2,7 @@ import type { BankrollMovement, Bet } from "@/types";
 
 export interface BankrollMetrics {
   activeBankroll: number;
+  availableBankroll: number;
   totalDeposits: number;
   totalWithdrawals: number;
   totalBonus: number;
@@ -45,6 +46,7 @@ export function calculateMetrics(bets: Bet[], movements: BankrollMovement[]): Ba
     .filter((bet) => bet.status === "pending")
     .reduce((total, bet) => total + bet.stake, 0);
   const activeBankroll = totalDeposits + totalBonus + totalAdjustments - totalWithdrawals + settledProfit;
+  const availableBankroll = activeBankroll - pendingExposure;
   const netRealProfit = activeBankroll + totalWithdrawals - totalDeposits;
   const ownCapitalAtRisk = Math.max(0, totalDeposits - totalWithdrawals);
   const realizedProfit = Math.max(0, totalWithdrawals - totalDeposits);
@@ -58,6 +60,7 @@ export function calculateMetrics(bets: Bet[], movements: BankrollMovement[]): Ba
 
   return {
     activeBankroll,
+    availableBankroll,
     totalDeposits,
     totalWithdrawals,
     totalBonus,
