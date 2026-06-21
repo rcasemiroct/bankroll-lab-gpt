@@ -11,6 +11,8 @@ describe("runMonteCarlo", () => {
     expect(result.probabilityOfRuin).toBe(0);
     expect(result.averageBetsToTarget).toBe(2);
     expect(result.medianFinalBankroll).toBe(120);
+    expect(result.distribution.reduce((total, bucket) => total + bucket.count, 0)).toBe(100);
+    expect(result.distribution.every((bucket) => bucket.end > bucket.start)).toBe(true);
   });
   it("encerra todos os caminhos no stop quando o gerador sempre perde", () => {
     const result = runMonteCarlo({ ...settings, numberOfBets: 20 }, () => 1);

@@ -3,7 +3,7 @@ import type { MonteCarloResult } from "@/lib/monteCarlo";
 import { currency } from "@/lib/utils";
 
 export function DistributionChart({ result }: { result: MonteCarloResult }) {
-  return <div className="h-52" aria-label="Distribuição das bancas finais"><ResponsiveContainer minWidth={1} initialDimension={{ width: 320, height: 208 }}><BarChart data={result.distribution}><XAxis dataKey="range" tick={{ fill: "var(--muted-foreground)", fontSize: 9 }} axisLine={false} tickLine={false} /><YAxis hide /><Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8 }} labelFormatter={(value) => `Banca final a partir de ${currency.format(Number(value))}`} formatter={(value) => [Number(value), "Simulações"]} /><Bar isAnimationActive={false} dataKey="count" fill="var(--chart)" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div>;
+  return <div className="h-52" aria-label="Distribuição das bancas finais"><ResponsiveContainer minWidth={1} initialDimension={{ width: 320, height: 208 }}><BarChart data={result.distribution}><XAxis dataKey="range" tick={{ fill: "var(--muted-foreground)", fontSize: 9 }} axisLine={false} tickLine={false} /><YAxis hide /><Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8 }} labelFormatter={(value) => `Faixa final R$ ${value}`} formatter={(value) => [Number(value), "Simulações"]} /><Bar isAnimationActive={false} dataKey="count" fill="var(--chart)" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div>;
 }
 
 export function PathsChart({ result }: { result: MonteCarloResult }) {

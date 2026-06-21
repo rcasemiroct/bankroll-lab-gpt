@@ -22,6 +22,8 @@ export function Simulation({ data }: { data: ReturnTypeOfUseAppData }) {
     () => calibrateFromHistory(data.bets, data.metrics.activeBankroll, historyWindow),
     [data.bets, data.metrics.activeBankroll, historyWindow]
   );
+  const distributionReading = describeDistribution(result, settings);
+  const pathsReading = describePaths(result, settings);
 
   function change<K extends keyof SimulationSettings>(key: K, value: SimulationSettings[K]) {
     setSettings((current) => ({ ...current, [key]: value }));
@@ -87,9 +89,9 @@ export function Simulation({ data }: { data: ReturnTypeOfUseAppData }) {
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4"><Result label="Prob. da meta" value={percent.format(result.probabilityOfTarget)} tone="positive" /><Result label="Prob. do stop" value={percent.format(result.probabilityOfRuin)} tone="negative" /><Result label="Mediana final" value={currency.format(result.medianFinalBankroll)} /><Result label="Drawdown médio" value={percent.format(-result.averageMaxDrawdown)} tone="warning" /></div>
 
-      <Card><CardHeader><CardTitle>Distribuição final</CardTitle><CardDescription>P10 {currency.format(result.p10FinalBankroll)} · P90 {currency.format(result.p90FinalBankroll)}</CardDescription></CardHeader><CardContent className="flex flex-col gap-3"><Explanation title="Como ler as barras?">Cada barra reúne quantas simulações terminaram dentro daquela faixa de banca. Quanto mais alta a barra, mais vezes aquele intervalo apareceu entre os futuros sorteados. O gráfico projeta o saldo após {settings.numberOfBets} apostas, não um lucro garantido.</Explanation><DistributionChart result={result} /></CardContent></Card>
+      <Card><CardHeader><CardTitle>Distribuição final</CardTitle><CardDescription>P10 {currency.format(result.p10FinalBankroll)} · P90 {currency.format(result.p90FinalBankroll)}</CardDescription></CardHeader><CardContent className="flex flex-col gap-3"><Explanation title="Leitura deste cenário">{distributionReading}</Explanation><DistributionChart result={result} /></CardContent></Card>
 
-      <Card><CardHeader><CardTitle>Caminhos simulados</CardTitle><CardDescription>Oito exemplos entre milhares de trajetórias calculadas</CardDescription></CardHeader><CardContent className="flex flex-col gap-3"><Explanation title="Como ler as linhas?">Cada linha é um futuro possível para a banca. Da esquerda para a direita avançam as apostas; para cima ou para baixo aparece o efeito da sequência aleatória de vitórias e perdas. As linhas não tentam adivinhar a ordem dos próximos resultados.</Explanation><PathsChart result={result} /></CardContent></Card>
+      <Card><CardHeader><CardTitle>Caminhos simulados</CardTitle><CardDescription>Oito exemplos entre milhares de trajetórias calculadas</CardDescription></CardHeader><CardContent className="flex flex-col gap-3"><Explanation title="Leitura destes 8 caminhos">{pathsReading}</Explanation><PathsChart result={result} /></CardContent></Card>
 
       <div className="rounded-lg border border-warning/50 bg-warning/5 p-4"><IconAlertTriangle className="mb-2 text-warning" /><strong className="block text-sm text-warning">Simulação não valida uma estratégia.</strong><p className="mb-0 mt-1 text-sm leading-relaxed text-muted-foreground">Ela expõe o que pode acontecer sob premissas escolhidas. A incerteza real pode ser maior.</p></div>
     </div>
@@ -102,3 +104,26 @@ function Result({ label, value, tone }: { label: string; value: string; tone?: "
 function formatDate(date: string) { return shortDate.format(new Date(`${date}T12:00:00`)); }
 function round(value: number, digits: number) { const factor = 10 ** digits; return Math.round(value * factor) / factor; }
 function roundMoney(value: number) { return round(value, 2); }
+
+function describeDistribution(result: ReturnType<typeof runMonteCarlo>, settings: SimulationSettings) {
+  const bucket = result.distribution.reduce((mostCommon, current) => current.count > mostCommon.count ? current : mostCommon, result.distribution[0]);
+  if (!bucket) return "A simulação ainda não produziu uma distribuição.";
+  const total = result.distribution.reduce((sum, item) => sum + item.count, 0);
+  const target = result.probabilityOfTarget > 0
+    ? `${percent.format(result.probabilityOfTarget)} chegaram à meta, em média após ${Math.round(result.averageBetsToTarget)} apostas.`
+    : `Nenhuma chegou à meta de ${currency.format(settings.targetBankroll)} dentro do horizonte escolhido.`;
+  const stop = result.probabilityOfRuin > 0
+    ? ` ${percent.format(result.probabilityOfRuin)} tocaram o stop de ${currency.format(settings.stopBankroll)}.`
+    : " Nenhuma tocou o stop.";
+  return `A faixa final mais frequente foi de ${currency.format(bucket.start)} a ${currency.format(bucket.end)}: ${bucket.count} de ${total} simulações (${percent.format(bucket.count / total)}). Isso mostra onde a banca terminou mais vezes após até ${settings.numberOfBets} apostas; não é a quantidade de apostas necessária para chegar à meta. ${target}${stop}`;
+}
+
+function describePaths(result: ReturnType<typeof runMonteCarlo>, settings: SimulationSettings) {
+  const finalPoint = result.paths.at(-1);
+  const finalValues = finalPoint ? Object.entries(finalPoint).filter(([key]) => key !== "bet").map(([, value]) => Number(value)) : [];
+  if (!finalValues.length) return "Ainda não há caminhos para interpretar.";
+  const above = finalValues.filter((value) => value > settings.initialBankroll).length;
+  const below = finalValues.filter((value) => value < settings.initialBankroll).length;
+  const valueRule = settings.stakeMode === "fixed" ? currency.format(settings.fixedStake) : percent.format(settings.stakePercentage);
+  return `Nestes oito exemplos, ${above} terminaram acima e ${below} abaixo da banca inicial, entre ${currency.format(Math.min(...finalValues))} e ${currency.format(Math.max(...finalValues))}. Todos usam odd média ${settings.averageOdds.toFixed(2)}, acerto de ${percent.format(settings.winProbability)} e ${valueRule} por aposta; muda apenas a ordem sorteada de vitórias e perdas. As oito linhas ilustram trajetórias, mas não medem frequência — quem resume todas as ${settings.numberOfSimulations} simulações são as barras acima.`;
+}

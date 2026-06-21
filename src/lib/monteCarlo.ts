@@ -43,7 +43,7 @@ export interface MonteCarloResult {
   p90FinalBankroll: number;
   averageMaxDrawdown: number;
   averageBetsToTarget: number;
-  distribution: { range: string; count: number }[];
+  distribution: { range: string; start: number; end: number; count: number }[];
   paths: { bet: number; [path: string]: number }[];
 }
 
@@ -113,8 +113,13 @@ function distribution(values: number[]) {
   const step = Math.max(1, (maximum - minimum) / 8);
   return Array.from({ length: 8 }, (_, index) => {
     const start = minimum + index * step;
-    const end = index === 7 ? maximum + 1 : start + step;
-    return { range: `${Math.round(start)}`, count: values.filter((value) => value >= start && value < end).length };
+    const end = start + step;
+    return {
+      range: `${Math.round(start)}–${Math.round(end)}`,
+      start,
+      end,
+      count: values.filter((value) => value >= start && (index === 7 ? value <= end : value < end)).length
+    };
   });
 }
 
